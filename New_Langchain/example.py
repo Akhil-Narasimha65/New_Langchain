@@ -61,7 +61,7 @@ def extract_numbers_with_context(text):
 
 
 def post_process_aggregation(question, answer):
-    """Post-process the answer for aggregation questions with improved filtering."""
+    """Post-process the answer for aggregation questions with improved filtering and accuracy."""
     lower_question = question.lower()
     
     # Extract numbers and context
@@ -97,21 +97,20 @@ def post_process_aggregation(question, answer):
                 
                 if filtered_numbers:
                     total = sum(filtered_numbers)
-                    return f"The total sales for {filter_condition} '{filter_value.capitalize()}' is {total}. Details: {answer}"
-                else:
-                    return f"No specific data found for {filter_condition} '{filter_value.capitalize()}'. Raw answer: {answer}"
+                    return f"The total sum for {filter_condition} '{filter_value.capitalize()}' is {total}."
         
-        # If no filter condition or filtered results are found
+        # If the answer already contains a calculated total, return it directly
+        total_match = re.search(r"total.*?(\d+(?:\.\d+)?)", answer, re.IGNORECASE)
+        if total_match:
+            return answer
+
+        # If no filter condition or filtered results are found, and no total in the answer
         if numbers_with_context:
-            total = 0
-            for *contexts, num in numbers_with_context:
-                try:
-                    total += float(num)
-                except ValueError:
-                    continue
-            return f"The total of all sales mentioned is {total}. This may not be specific to your query. Details: {answer}"
+            total = sum(float(num) for *_, num in numbers_with_context if num.replace('.', '').isdigit())
+            if total > 0:
+                return f"The total sum of all values mentioned is {total}. {answer}"
     
-    # If it's not an aggregation question, return the answer as-is
+    # If it's not an aggregation question or no aggregation was performed, return the answer as-is
     return answer
 
 st.title("PDF Q&A Bot")
